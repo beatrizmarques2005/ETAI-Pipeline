@@ -116,3 +116,11 @@ You're free to improve on this structure or restructure it entirely -- what matt
 ## Dataset
 
 See `data/README.md`.
+
+## Result Analysis
+
+**Week 02 (16/09/2026)** - Logistic Regression VS Decision Tree<br>
+
+**Logistic Regression is better because** it achieves a higher **test accuracy** (67.7% vs. 66.8%) and has a smaller **train-test gap** (0.001 vs. 0.012), indicating better generalisation and less overfitting.
+
+Although the Decision Tree has a slightly higher F1-score for **class 1** (0.64 vs. 0.63), Logistic Regression performs slightly better overall and has a lower **false positive rate** for the largest race group, African-American (0.33 vs. 0.39).
