@@ -108,12 +108,5 @@ Alternative: set up an SSH key once (`ssh-keygen -t ed25519`, then add the publi
 
 ## Result Analysis
 
-**Week 2 (16/09/2026) -- Logistic Regression vs. Decision Tree** *(baseline preprocessing)*
+The full weekly analysis is in [`result_analysis.md`](result_analysis.md).
 
-Logistic Regression performs better: higher **test accuracy** (67.7% vs. 66.8%) and a smaller **train-test gap** (0.001 vs. 0.012), so it generalises better and overfits less.
-
-The Decision Tree has a slightly higher F1-score for **class 1** (0.64 vs. 0.63), but Logistic Regression is better overall and has a lower **false positive rate** for the largest race group, African-American (0.33 vs. 0.39).
-
-**Week 3 (23/09/2026) -- After cleaning and preprocessing**
-
-*TO-DO*

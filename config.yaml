@@ -54,10 +54,10 @@ preprocessing:
     categorical_strategy: "most_frequent"
 
 model:
-  type: "decision_tree"   # "logistic_regression" or "decision_tree"
+  type: "logistic_regression"   # "logistic_regression" or "decision_tree"
   params:
-    max_depth: 5          # decision tree only
-    # max_iter: 1000         # logistic regression only
+    # max_depth: 5          # decision tree only
+    max_iter: 1000         # logistic regression only
 
 output:
   results_dir: "results"
