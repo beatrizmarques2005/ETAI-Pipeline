@@ -1,151 +1,94 @@
 # Baseline Predictive Pipeline -- ETAI
 
-```
-Name: Beatriz Marques
-Student Number: 20231605
-```
+**Beatriz Marques** · 20231605 · forked from [sofiacper/ETAI-Pipeline](https://github.com/sofiacper/ETAI-Pipeline)
 
-[Main Repo Link - Classes](https://github.com/sofiacper/ETAI-Pipeline)
+Predictive pipeline for two-year recidivism using ProPublica's COMPAS dataset -- the data behind a 2016 investigation into a risk-assessment algorithm used by US courts to inform bail and sentencing decisions. See `data/README.md` for the full problem description and data dictionary.
 
-This is the **starting point** for your semester project: a small but *complete* predictive pipeline -- every piece a real project needs (entry point, config, data loading, preprocessing, model, evaluation), just kept as simple as possible for now.
-
-The task: predict two-year recidivism using ProPublica's COMPAS
-dataset -- the data behind a real 2016 investigation into a risk-
-assessment algorithm actually used by US courts to help inform bail and sentencing decisions. See `data/README.md` for the full problem description and a complete data dictionary before you start.
-
-It has some **deliberately weak spots**. Part of your work this
-semester is finding them and making them better -- see the pipeline progress table below, which tracks what changes and why as the weeks
-go on.
+The pipeline started from the course baseline and is improved each week. Changes are logged in the progress table below.
 
 ## Project structure
 
 ```
-├── main.py                  # entry point: run the whole pipeline
-├── config.yaml               # all tunable settings live here
+├── main.py                   # entry point: runs the whole pipeline
+├── config.yaml               # all tunable settings
 ├── requirements.txt
 ├── src/
-│   ├── data.py               # loading
-│   ├── data_diagnostics.py   # missingness-mechanism test, domain-rule checks, duplicate check (new week 3)
-│   ├── preprocessing.py      # leak-safe cleaning, deployable preprocessing pipeline, and train/test split (week 3 grew this file's job well beyond just the split -- same file, same name as week 2)
-│   ├── model.py               # model construction
-│   ├── evaluate.py           # accuracy  + fairness check
-│   └── results.py            # saves each run's report to disk
-├── results/                  # created automatically -- one file per run (not tracked in git)
+│   ├── data.py               # data loading
+│   ├── data_diagnostics.py   # missingness-mechanism test, domain-rule checks, duplicate check
+│   ├── preprocessing.py      # leak-safe cleaning, preprocessing pipeline, train/test split
+│   ├── model.py              # model construction
+│   ├── evaluate.py           # accuracy + fairness check
+│   └── results.py            # saves each run's report
+├── notebooks/
+│   ├── 01_eda_introduction.ipynb   # EDA: missingness, invalid values, duplicates, correlation + VIF
+│   └── 02_preprocessing.ipynb      # encoder/scaler grid + paired comparison
+├── results/                  # created automatically, one file per run (not tracked in git)
 └── data/
     ├── compas_two_year_recidivism.csv
-    └── README.md              # problem description + full data dictionary
+    ├── diagnosis_log.json    # diagnosis log
+    └── README.md             # problem description + data dictionary
 ```
 
 ## Pipeline progress
 
-This table is updated after each practical class, so you can always see what changed in the pipeline and why -- it's a running log, not a fixed syllabus.
-
-| Week | Practical class focus | Added to the pipeline |
-|------|------------------------|------------------------|
-| 2 | Introduction & baseline pipeline | Initial version: project structure, a single naive train/test split (no cross-validation), minimal preprocessing (drop rows with missing values, one-hot encode categoricals), logistic regression baseline, a first (deliberately simple) fairness check comparing our model's and COMPAS's own false-positive rate by race, train-vs-test accuracy reporting (to start spotting overfitting), and each run's full report saved automatically to `results/` |
-| 3 | EDA + preprocessing -- diagnose the data, then fix it | `src/data_diagnostics.py` (missingness-mechanism test via chi-square + Cramér's V, domain-rule invalid-value detection, two-way duplicate check) and `src/preprocessing.py` (leak-safe category cleanup, mechanism-matched imputation with `_was_missing` indicators for MNAR columns, a deployable `ColumnTransformer`, **and** the train/test split itself, all in the one file rather than split across two) replace the old naive `dropna()`/`pd.get_dummies()` preprocessing; encoder/scaler pair (count encoding + robust scaling) chosen by an empirical grid over 15 repeated splits, checked against the runner-up with a paired comparison so the win isn't just noise; three redundant columns (found via correlation + VIF) dropped; `config.yaml` gains `diagnostics` and `preprocessing` sections -- see "Preprocessing decisions" below. |
+| Week | Focus | Added to the pipeline |
+|------|-------|-----------------------|
+| 2 | Introduction & baseline pipeline | Project structure; single train/test split (no cross-validation); minimal preprocessing (drop rows with missing values, one-hot encode categoricals); logistic regression baseline; simple fairness check comparing our model's and COMPAS's false-positive rate by race; train-vs-test accuracy reporting; each run's report saved to `results/`. |
+| 3 | EDA + preprocessing | `src/data_diagnostics.py` (missingness-mechanism test via chi-square + Cramér's V, domain-rule invalid-value detection, duplicate check). `src/preprocessing.py` now handles leak-safe category cleanup, mechanism-matched imputation with `_was_missing` indicators for MNAR columns, a deployable `ColumnTransformer`, and the train/test split, replacing the old `dropna()`/`pd.get_dummies()`. Encoder/scaler (target encoding + standard scaling) chosen by an empirical grid over 15 repeated splits. Three redundant columns dropped (correlation + VIF). `config.yaml` gains `diagnostics` and `preprocessing` sections. |
 
 ## Preprocessing decisions
 
-*(New this week -- written straight from the diagnosis in `Practical/W3/notebooks/01_eda_introduction.ipynb` and the empirical grid in `02_preprocessing.ipynb`. Full walkthrough lives in those two notebooks; this is the summary.)*
+Summary of the diagnosis in `01_eda_introduction.ipynb` and the empirical grid in `02_preprocessing.ipynb`.
 
 | Column(s) | Issue found | Mechanism | What was done |
 |---|---|---|---|
-| `age` | 2.0% missing | MCAR | median impute, no indicator needed |
-| `juv_fel_count` | 3.0% missing | MCAR | median impute, no indicator needed |
+| `age` | 2.0% missing | MCAR | median impute, no indicator |
+| `juv_fel_count` | 3.0% missing | MCAR | median impute, no indicator |
 | `priors_count` | ~7% missing (incl. placeholder tokens) | MNAR -- tied to `age_cat` | median impute + `priors_count_was_missing` flag |
 | `c_charge_degree` | 3.2% missing | MNAR -- tied to `age_cat` | mode impute + `c_charge_degree_was_missing` flag |
-| `race` | ~1% missing (placeholder tokens) | MCAR | mode impute, no indicator (excluded from model features anyway) |
-| `sex` | ~1.5% missing (incl. placeholder tokens) | MCAR | mode impute, no indicator needed |
-| `age`, `decile_score`, `juv_fel_count`, `priors_count` | invalid values (out-of-range or negative) | domain rule | converted to `NaN` before imputation |
-| `sex` / `race` / `c_charge_degree` / `score_text` | inconsistent category spelling (casing, whitespace, abbreviations) | data entry | canonicalized to one spelling per category |
-| whole rows | 72 exact-duplicate rows, all sharing a repeated `id` | data entry | dropped, kept first occurrence |
-| `prior_offenses`, `age_in_months`, `juvenile_total` | redundant with other columns (correlation r=1.00, or -- for `juvenile_total` -- an exact sum caught only by VIF) | multicollinearity | dropped |
+| `race` | ~1% missing (placeholder tokens) | MCAR | mode impute, no indicator (not a model feature) |
+| `sex` | ~1.5% missing (incl. placeholder tokens) | MCAR | mode impute, no indicator |
+| `age`, `decile_score`, `juv_fel_count`, `priors_count` | out-of-range or negative values | domain rule | converted to `NaN` before imputation |
+| `sex` / `race` / `c_charge_degree` / `score_text` | inconsistent spelling (casing, whitespace, abbreviations) | data entry | canonicalized to one spelling per category |
+| whole rows | 72 exact duplicates sharing a repeated `id` | data entry | dropped, kept first occurrence |
+| `prior_offenses`, `age_in_months`, `juvenile_total` | redundant (r = 1.00, or an exact sum caught by VIF for `juvenile_total`) | multicollinearity | dropped |
 
-**Encoder/scaler pair:** chosen empirically -- 4 encoders (one-hot, ordinal, count, target) × 4 scalers (none, standard, min-max, robust), scored by mean accuracy across 15 repeated train/test splits with logistic regression. **Target encoding + standard scaling won**, though a paired comparison against the runner-up (same 15 splits, per-split difference) showed the margin was within noise -- see `02_preprocessing.ipynb`'s grid + paired-comparison cells for the full table and the check itself.
+**Encoder/scaler pair:** 4 encoders (one-hot, ordinal, count, target) × 4 scalers (none, standard, min-max, robust), scored by mean accuracy over 15 repeated train/test splits with logistic regression. **Target encoding + standard scaling won**, but a paired comparison against the runner-up showed the margin was within noise.
 
-## Environment setup
+## Setup
 
-You only need to do this once per machine.
+Run once per machine:
 
-### macOS / Linux
 ```bash
-python3 -m venv venv                 # creates an isolated Python environment in a folder called "venv"
-source venv/bin/activate             # activates it -- packages install here, not system-wide, and stay out of your other projects
-pip install -r requirements.txt      # installs the exact packages this project needs, into that environment
-```
-
-### Windows -- PowerShell
-```powershell
-python -m venv venv                  # creates an isolated Python environment in a folder called "venv"
-venv\Scripts\activate                # activates it -- packages install here, not system-wide, and stay out of your other projects
-pip install -r requirements.txt      # installs the exact packages this project needs, into that environment
-```
-If PowerShell blocks the activation script, run this once first:
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-### Windows -- cmd.exe
-Same three steps as above, just with cmd's own activation command:
-```cmd
-python -m venv venv
-venv\Scripts\activate.bat
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Once the environment is active you'll see `(venv)` at the start of your prompt. To leave it later, run `deactivate` (same command on every OS).
-
-### Every time after the first
-
-Creating the environment and installing packages only needs to happen once, ever. Every other time you sit down to work -- a new terminal window, the next practical class, tomorrow -- you don't repeat any of the steps above. From the project's root folder, you just need to:
-
-**macOS / Linux**
-```bash
-source venv/bin/activate
-python main.py
-```
-
-**Windows**
 ```powershell
+# Windows (PowerShell)
+python -m venv venv
 venv\Scripts\activate
-python main.py
+pip install -r requirements.txt
 ```
 
-That's it -- activate, then run. If you don't see `(venv)` at the start of your prompt, the environment isn't active and `python main.py` may use the wrong Python (or fail to find a package) entirely.
-
-## Environment Troubleshooting
-
-Two Windows issues come up often enough to note here -- if you hit either, this saves you re-diagnosing it from scratch.
-
-**PowerShell blocks the venv activation script, every new terminal.** The `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` line above only fixes it for that one terminal window -- close it and it's back. For a fix that actually sticks across sessions, run this **once**, instead:
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
-If it still doesn't stick (common on locked-down school/lab machines with a Group Policy that resets it on every logon), skip PowerShell entirely: use **Git Bash** (`source venv/Scripts/activate`) or **cmd.exe** (`venv\Scripts\activate.bat`) instead -- neither is affected by PowerShell's execution policy.
-
-**Windows blocks the terminal/Python from reading or writing files in Documents (or Desktop/Pictures).** Shows up as an "Access is denied" error, or a silent failure to create/update a file, only when the project sits inside one of those folders. Two independent settings can cause this -- check both:
-- **Windows Security -> Virus & threat protection -> Manage ransomware protection** -- turn off **Controlled folder access**, or add your terminal/Python/editor to its allowed-apps list.
-- **Settings -> Privacy & security -> File system** -- make sure the terminal/Python has access.
+If PowerShell blocks activation, run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` once, or use `venv\Scripts\activate.bat` in cmd.exe.
 
 ## Running the pipeline
 
-With the environment active (see above), from the project's root
-folder, on any OS:
+With the environment active, from the project root:
+
 ```bash
 python main.py
 ```
 
-This loads `config.yaml`, diagnoses and cleans the data (week 3's `data_diagnostics.py`/`preprocessing.py`), preprocesses and trains the model, and prints:
-- **train accuracy and test accuracy, side by side.** Comparing the two is how you catch overfitting: if the model looks much better on the data it was trained on than on data it's never seen, it has memorised rather than learned something that generalises.
+This loads `config.yaml`, diagnoses and cleans the data, trains the model, and prints:
+- train and test accuracy side by side (to spot overfitting)
 - a classification report on the test set
-- a false-positive-rate-by-race comparison between our model and
-  COMPAS's own score
+- a false-positive-rate-by-race comparison between the model and COMPAS's own score
 
-All of this is also saved to a timestamped file in `results/` (e.g.`results/run_20260916_143012.txt`), so it doesn't just scroll past in your terminal -- open it later, or change something in `config.yaml` (like the model type) and compare the new file to the last one.
-`results/` is created automatically the first time you run the pipeline, and isn't tracked in git (see `.gitignore`) since it's generated output, not source.
-
-You're free to improve on this structure or restructure it entirely -- what matters is that your project stays runnable end-to-end with a single command, and that each piece (data, preprocessing, model, evaluation) stays easy to find and change independently.
+Each run's report is also saved to `results/` as a timestamped file (e.g. `results/run_20260916_143012.txt`).
 
 ## Push to GitHub via Terminal
 
@@ -163,14 +106,14 @@ git push
 
 Alternative: set up an SSH key once (`ssh-keygen -t ed25519`, then add the public key under **GitHub -> Settings -> SSH and GPG keys**) and use the repo's SSH remote URL (`git@github.com:...`) instead of HTTPS -- no token to manage or renew.
 
-## Dataset
-
-See `data/README.md`.
-
 ## Result Analysis
 
-**Week 02 (16/09/2026)** - Logistic Regression VS Decision Tree<br>
+**Week 2 (16/09/2026) -- Logistic Regression vs. Decision Tree** *(baseline preprocessing)*
 
-**Logistic Regression is better because** it achieves a higher **test accuracy** (67.7% vs. 66.8%) and has a smaller **train-test gap** (0.001 vs. 0.012), indicating better generalisation and less overfitting.
+Logistic Regression performs better: higher **test accuracy** (67.7% vs. 66.8%) and a smaller **train-test gap** (0.001 vs. 0.012), so it generalises better and overfits less.
 
-Although the Decision Tree has a slightly higher F1-score for **class 1** (0.64 vs. 0.63), Logistic Regression performs slightly better overall and has a lower **false positive rate** for the largest race group, African-American (0.33 vs. 0.39).
+The Decision Tree has a slightly higher F1-score for **class 1** (0.64 vs. 0.63), but Logistic Regression is better overall and has a lower **false positive rate** for the largest race group, African-American (0.33 vs. 0.39).
+
+**Week 3 (23/09/2026) -- After cleaning and preprocessing**
+
+*TO-DO*
