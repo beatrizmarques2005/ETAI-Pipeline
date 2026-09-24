@@ -1,4 +1,10 @@
-"""Evaluation -- single train/test split, no cross-validation (yet)."""
+"""
+Evaluation
+----------
+
+Single train/test split, no cross-validation (yet).
+
+"""
 import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report
 

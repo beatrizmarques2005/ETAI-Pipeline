@@ -1,10 +1,10 @@
 """
-Data diagnostics -- generic, config-driven techniques for finding what's actually wrong with a dataset before preprocessing touches it: a tested missingness mechanism 
+Data diagnostics
+----------------
+
+Generic, config-driven techniques for finding what's actually wrong with a dataset before preprocessing touches it: a tested missingness mechanism 
 per column, domain-rule invalid-value detection, and a two-way duplicate check.
 
-Built in week 3 -- see Practical/W3/notebooks/01_eda_introduction.ipynb for the full walkthrough these three functions are lifted from, applied to this course's real
-(deliberately messy) COMPAS data. Nothing here is hardcoded to COMPAS's column names; every column list and rule comes from config.yaml's `diagnostics` section, so this
-module works unchanged on a different dataset.
 """
 import numpy as np
 import pandas as pd

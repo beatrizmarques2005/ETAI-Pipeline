@@ -1,24 +1,21 @@
 """
-Preprocessing -- same file, same job as week 2 (raw data in, model-ready train/test
-split out), now carrying the diagnosis-driven, leak-safe recipe this week's EDA
-notebook justifies: category cleanup, domain-rule/placeholder -> NaN conversion,
-de-duplication, mechanism-matched imputation, a leak-safe/deployable encoder/scaler
-pipeline, and the train/test split itself, all in one place instead of split across
-files -- there's exactly one obvious spot to look for "how does raw data become a
-model-ready split."
+Preprocessing
+-------------
 
-See Practical/W3/notebooks/02_preprocessing.ipynb for the full walkthrough, including
-the empirical grid that picked this week's `config.yaml`-recorded encoder/scaler pair.
+Functions for preprocessing the raw dataset.
 
 Two things every function here respects, on purpose:
+
   - leak-safe: `clean_dataset` and `split_features_target` are target- and
     split-independent, so they're safe to run on the whole dataset before splitting.
     `split_train_test` is the boundary line -- everything after it (imputation,
     encoding, scaling, inside `build_preprocessor`'s ColumnTransformer) is fit only on
     the training fold, never on data it's about to be evaluated against.
+
   - deployable from day one: every function up to (not including) the split is
     target-column-agnostic -- `y` comes back as `None` and nothing else breaks when
     called on label-free inference data, which never gets split at all.
+    
 """
 import numpy as np
 import pandas as pd

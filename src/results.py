@@ -1,7 +1,11 @@
 """
+Results
+-------
+
 Saving each run's results to disk.
 
-Printing to the terminal is fine while you're watching it happen, but it's gone the moment you scroll past it or close the window. This module writes the full report (accuracy, classification report, fairness table) to a timestamped file in `results/` instead, so youcan open it again later, or compare two runs side by side after changing something in config.yaml.
+Printing to the terminal is fine while you're watching it happen, but it's gone the moment you scroll past it or close the window. 
+This module writes the full report (accuracy, classification report, fairness table) to a timestamped file in `results/` instead, so youcan open it again later, or compare two runs side by side after changing something in config.yaml.
 """
 import os
 from datetime import datetime

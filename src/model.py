@@ -1,4 +1,10 @@
-"""Model construction."""
+"""
+Model
+-----
+
+Model building functions.
+
+"""
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 
