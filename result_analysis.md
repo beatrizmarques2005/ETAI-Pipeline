@@ -4,7 +4,7 @@
 
 `python main.py` evaluates one train/test split (`random_state=42`). A single split can favour
 one model by chance, so each comparison below also reports the **mean ± standard deviation over
-15 stratified 80/20 splits** (`random_state` 0–14), with each split identical across all configurations.
+15 stratified 80/20 splits**, with each split identical across all configurations.
 
 ---
 
@@ -17,8 +17,8 @@ Accuracy is the mean ± std over 15 stratified 80/20 splits, unless stated other
 | Week | Main change | Best model | Mean test accuracy |
 |---|---|---|---:|
 | 2 | Baseline pipeline | Logistic Regression | 0.672 ± 0.011 |
-| 3 | EDA-driven preprocessing | Decision Tree (`max_depth=5`) | 0.675 ± 0.011 |
-
+| 3 | EDA-driven preprocessing | Decision Tree | 0.675 ± 0.011 |
+| 4 | Locked test set + 5-fold CV | Decision Tree | 0.675 ± 0.018 (5-fold CV) |
 
 ### Week 2 — Baseline
 ---
@@ -28,7 +28,7 @@ Accuracy is the mean ± std over 15 stratified 80/20 splits, unless stated other
 | Model | Mean test accuracy |
 |---|---:|
 | Logistic Regression | **0.672 ± 0.011** |
-| Decision Tree (`max_depth=5`) | 0.662 ± 0.014 |
+| Decision Tree | 0.662 ± 0.014 |
 
 **Findings:** `dropna()` removed 14% of the rows, mostly older defendants. Race labels were not cleaned, so the fairness check split the same group into several spellings.
 
@@ -40,7 +40,7 @@ Accuracy is the mean ± std over 15 stratified 80/20 splits, unless stated other
 | Model | Mean test accuracy | vs Week 2 |
 |---|---:|---:|
 | Logistic Regression | 0.670 ± 0.014 | −0.002 |
-| Decision Tree (`max_depth=5`) | **0.675 ± 0.011** | +0.013 |
+| Decision Tree | **0.675 ± 0.011** | +0.013 |
 
 **Challenge answers:**
 
@@ -48,20 +48,38 @@ Accuracy is the mean ± std over 15 stratified 80/20 splits, unless stated other
 2. **New data issue:** 6 rows had an `age_cat` that contradicted `age`. These are now recomputed from `age`. 10 `score_text`/`decile_score` mismatches were flagged; neither column is a model feature.
 3. **Week 2 vs Week 3:** preprocessing improved the decision tree and left logistic regression about the same. False-positive rates fell for both models, mainly because more rows were kept and categories were cleaned. The single `random_state=42` run looked worse, but its test sets differ in size (1,252 vs 1,443) and are not directly comparable.
 
-**Best model:** Decision Tree (`max_depth=5`). Logistic regression is close and has lower false-positive rates.
+**Best model:** Decision Tree. Logistic regression is close and has lower false-positive rates.
 
-### Week 4 — Preprocessing and Cross-Validation
+### Week 4 — Preprocessing inside the pipeline and cross-validation
 ---
 
-**What changed:** ...
+**What changed:** a locked final test set (20%, stratified, seed 42, 1,443 rows) is set aside and never scored.
+Models are now judged by stratified 5-fold cross-validation of the whole pipeline (preprocessing + model) on the
+5,771 development rows. 
 
-| Model | Mean test accuracy | vs Week 3 |
-|---|---:|---:|
-| ... | ... | ... |
+**Other changes**: target encoding switched to scikit-learn's cross-fitting `TargetEncoder`,
+standard scaling replaced by robust scaling, 229 `c_charge_degree` gaps that had been hidden as the string `"nan"`
+are now imputed and flagged, and an untuned `random_forest` was added.
 
-**Findings:** ...
+| Model | CV val. accuracy (mean ± std) | Mean train–val gap | F1 (class 1) | vs Week 3 |
+|---|---:|---:|---:|---:|
+| Logistic Regression | 0.672 ± 0.013 | +0.003 | 0.58 | +0.002 |
+| Decision Tree | **0.675 ± 0.018** | +0.010 | 0.60 | 0.000 |
+| Random Forest (untuned, 300 trees) | 0.650 ± 0.018 | **+0.083** | 0.60 | – |
 
-**Best model:** ...
+*"vs Week 3" is only indicative: Week 3 used 15 repeated 80/20 splits of all rows, Week 4 uses 5-fold CV on the
+development set only.*
+
+**Findings:**
+
+- **Logistic regression and the decision tree are tied.** They differ by 0.003, well under one standard deviation, and neither changed meaningfully from Week 3. So the new evaluation confirms the Week 3 result rather than changing it.
+- **The untuned random forest overfits.** It scores 0.733 on the training folds but only 0.650 on validation, a gap of 0.083 in every fold (0.068–0.109). With default settings each tree grows until it memorises its training rows, so it needs limits such as `max_depth` or `min_samples_leaf` before it can compete.
+- **Logistic regression is the most stable model.** It has the smallest gap (+0.003) and the lowest spread across folds (± 0.013).
+- **Fairness:** on out-of-fold predictions, logistic regression has the lowest false-positive rates (African-American 0.26, Caucasian 0.13), well below COMPAS's own score (0.45 / 0.23). The random forest has the highest (0.36 / 0.23).
+
+**Best model:** Decision Tree, 0.675 ± 0.018, by a margin smaller than its standard deviation.
+Logistic regression is statistically tied (0.672 ± 0.013), more stable across folds, and has lower false-positive
+rates. The untuned random forest is not a candidate until it is tuned.
 
 
 <!-- TEMPLATE
