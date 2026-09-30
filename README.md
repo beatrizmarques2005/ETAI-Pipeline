@@ -31,10 +31,13 @@ The pipeline started from the course baseline and is improved each week. Changes
 
 ## Pipeline progress
 
+This table is updated after each practical class, so you can always see what changed in the pipeline and why -- it's a running log, not a fixed syllabus.
+
 | Week | Focus | Added to the pipeline |
 |------|-------|-----------------------|
 | 2 | Introduction & baseline pipeline | Project structure; single train/test split (no cross-validation); minimal preprocessing (drop rows with missing values, one-hot encode categoricals); logistic regression baseline; simple fairness check comparing our model's and COMPAS's false-positive rate by race; train-vs-test accuracy reporting; each run's report saved to `results/`. |
 | 3 | EDA + preprocessing | `src/data_diagnostics.py` (missingness-mechanism test via chi-square + Cramér's V, domain-rule invalid-value detection, duplicate check). `src/preprocessing.py` now handles leak-safe category cleanup, mechanism-matched imputation with `_was_missing` indicators for MNAR columns, a deployable `ColumnTransformer`, and the train/test split, replacing the old `dropna()`/`pd.get_dummies()`. Encoder/scaler (target encoding + standard scaling) chosen by an empirical grid over 15 repeated splits. Three redundant columns dropped (correlation + VIF). `config.yaml` gains `diagnostics` and `preprocessing` sections. |
+| 4 | Preprocessing inside the pipeline + cross-validation -- evaluating a model honestly | A **locked final test set** (20%, stratified, seed 42) is set aside by `split_dev_test()` (replaces `split_train_test()`) and never scored; models are now judged by **stratified 5-fold cross-validation** of the whole pipeline (preprocessing + model) on the development set, reported per fold with mean ± std and the train-validation gap; the classification report and fairness check now use out-of-fold predictions; target encoding switched to scikit-learn's cross-fitting `TargetEncoder` (a row's own label never leaks into its own encoding), encoder/scaler set by hand in `config.yaml` (target encoding + robust scaling, reasons in the comments); **two fixes** in `clean_dataset()`: genuine `NaN`s in categorical columns were being turned into the string `"nan"` (a fake category), so 229 `c_charge_degree` gaps were never imputed or flagged -- fixed in `config.yaml` alone: `"nan"` added to `diagnostics.placeholder_tokens` (the category cleanup's last step turns listed tokens into `NaN`, after its text conversion); and it no longer drops rows -- de-duplication moved to a separate, training-only `drop_duplicate_rows()` (run before the dev/test split), so the same cleaning can run on new data where every row needs a prediction; `src/data_diagnostics.py` removed -- its one cleaning function (`flag_invalid_values`) moved into `preprocessing.py`, and the EDA-only checks (missingness test, duplicate counts) live in the EDA notebooks, not in every pipeline run; `dummy` (majority-class) model added as the floor to beat, and `random_forest` registered (sensible defaults, untuned); the final model is refit on the whole development set after CV; `config.yaml` gains `test_set` and `cv` sections -- see "Model evaluation" below |
 
 ## Preprocessing decisions
 
@@ -53,7 +56,8 @@ Summary of the diagnosis in `01_eda_introduction.ipynb` and the empirical grid i
 | whole rows | 72 exact duplicates sharing a repeated `id` | data entry | dropped, kept first occurrence |
 | `prior_offenses`, `age_in_months`, `juvenile_total` | redundant (r = 1.00, or an exact sum caught by VIF for `juvenile_total`) | multicollinearity | dropped |
 
-**Encoder/scaler pair:** 4 encoders (one-hot, ordinal, count, target) × 4 scalers (none, standard, min-max, robust), scored by mean accuracy over 15 repeated train/test splits with logistic regression. **Target encoding + standard scaling won**, but a paired comparison against the runner-up showed the margin was within noise.
+**Encoder/scaler pair:** chosen by hand in `config.yaml` -- **target encoding** (compact, informative and **robust scaling** (median/IQR, so the few extreme counts don't set the scale). The alternatives (`onehot`/`ordinal`/`count`, `none`/`standard`/`minmax`) are one config change away.
+
 
 ## Setup
 
@@ -83,12 +87,19 @@ With the environment active, from the project root:
 python main.py
 ```
 
-This loads `config.yaml`, diagnoses and cleans the data, trains the model, and prints:
-- train and test accuracy side by side (to spot overfitting)
-- a classification report on the test set
-- a false-positive-rate-by-race comparison between the model and COMPAS's own score
+This loads `config.yaml`, diagnoses and cleans the data, locks the final test set away, cross-validates preprocessing + model on the development set, and prints:
+- **a per-fold cross-validation table** -- train and validation accuracy for each of the 5 folds, the gap between them, and their mean ± std. Comparing train and validation is how you catch overfitting: if the model looks much better on the data it was trained on than on data it's never seen, it has memorised rather than learned something that generalises.
+- a classification report on the out-of-fold predictions
+- a false-positive-rate-by-race comparison between our model and COMPAS's own score (same rows)
+- the final model -- the same pipeline refit on all development rows (CV estimated how good it is; this is the model itself)
+- a reminder of how many rows are in the locked test set -- which is **not** evaluated
 
-Each run's report is also saved to `results/` as a timestamped file (e.g. `results/run_20260916_143012.txt`).
+All of this is also saved to a timestamped file in `results/` (e.g.`results/run_20260916_143012.txt`), so it doesn't just scroll past in your terminal -- open it later, or change something in `config.yaml` (like the model type) and compare the new file to the last one.
+`results/` is created automatically the first time you run the
+pipeline, and isn't tracked in git (see `.gitignore`) since it's
+generated output, not source.
+
+You're free to improve on this structure or restructure it entirely -- what matters is that your project stays runnable end-to-end with a single command, and that each piece (data, preprocessing, model, evaluation) stays easy to find and change independently.
 
 ## Push to GitHub via Terminal
 
