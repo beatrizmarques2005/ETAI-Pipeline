@@ -21,7 +21,8 @@ The pipeline started from the course baseline and is improved each week. Changes
 │   └── results.py            # saves each run's report
 ├── notebooks/
 │   ├── 01_eda_introduction.ipynb   # EDA: missingness, invalid values, duplicates, correlation + VIF
-│   └── 02_preprocessing.ipynb      # encoder/scaler grid + paired comparison
+│   ├── 02_preprocessing.ipynb      # encoder/scaler grid + paired 
+│   └── 03_cross_validation.ipynb      
 ├── results/                  # created automatically, one file per run (not tracked in git)
 └── data/
     ├── compas_two_year_recidivism.csv

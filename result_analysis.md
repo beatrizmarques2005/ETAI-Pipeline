@@ -50,6 +50,19 @@ Accuracy is the mean ± std over 15 stratified 80/20 splits, unless stated other
 
 **Best model:** Decision Tree (`max_depth=5`). Logistic regression is close and has lower false-positive rates.
 
+### Week 4 — Preprocessing and Cross-Validation
+---
+
+**What changed:** ...
+
+| Model | Mean test accuracy | vs Week 3 |
+|---|---:|---:|
+| ... | ... | ... |
+
+**Findings:** ...
+
+**Best model:** ...
+
 
 <!-- TEMPLATE
 ### Week N — <topic>
